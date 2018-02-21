@@ -1,9 +1,13 @@
 package com.githang.finddifferent;
 
+import com.android.utils.FileUtils;
+
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.IOException;
 
 /**
@@ -14,8 +18,8 @@ public class Main {
     private static final int HEIGHT = 550;
 
     private static final int START_X = 134;
-    private static final int START_Y1 = 66;
-    private static final int START_Y2 = 666;
+    private static final int START_Y1 = 112;
+    private static final int START_Y2 = 686;
 
     public static void main(String[] args) throws IOException {
         AdbHelper helper = new AdbHelper();
@@ -66,12 +70,17 @@ public class Main {
     }
 
     private static void refreshSnapshot(AdbHelper helper, ImagePanel panel) {
-        BufferedImage snapshot1 = helper.snapshot();
+        BufferedImage snapshot = helper.snapshot();
+        try {
+            ImageIO.write(snapshot, "png", new File("out/screenshot.png"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         BufferedImage image = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
         for (int y = 0; y < HEIGHT; y++) {
             for (int x = 0; x < WIDTH; x++) {
-                Color a = new Color(snapshot1.getRGB(START_X + x, START_Y1 + y));
-                Color b = new Color(snapshot1.getRGB(START_X + x, START_Y2 + y));
+                Color a = new Color(snapshot.getRGB(START_X + x, START_Y1 + y));
+                Color b = new Color(snapshot.getRGB(START_X + x, START_Y2 + y));
                 if (isDifferentColor(a, b)) {
                     image.setRGB(x, y, a.getRGB());
                 } else {
