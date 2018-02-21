@@ -1,14 +1,11 @@
 package com.githang.finddifferent;
 
-import com.android.utils.FileUtils;
-
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.*;
 
 /**
  * @author 黄浩杭 (huanghaohang@parkingwang.com)
@@ -20,6 +17,9 @@ public class Main {
     private static final int START_X = 134;
     private static final int START_Y1 = 112;
     private static final int START_Y2 = 686;
+
+    private static final ScheduledThreadPoolExecutor SCHEDULED_THREAD_POOL = new ScheduledThreadPoolExecutor(3);
+    private static ScheduledFuture sFuture;
 
     public static void main(String[] args) throws IOException {
         AdbHelper helper = new AdbHelper();
@@ -33,7 +33,6 @@ public class Main {
                 int x = START_X + e.getX();
                 int y = START_Y1 + e.getY();
                 helper.click(x, y);
-                refreshSnapshot(helper, panel);
             }
         });
 
@@ -44,20 +43,22 @@ public class Main {
         connect.setSize(100, 50);
         connect.addActionListener(e -> {
             helper.waitForConnection();
-            refreshSnapshot(helper, panel);
+            cancelScheduledFuture();
+            sFuture = SCHEDULED_THREAD_POOL.scheduleAtFixedRate(() -> refreshSnapshot(helper, panel), 1, 2, TimeUnit.SECONDS);
         });
         buttons.add("connect", connect);
 
         Button disconnect = new Button("disconnect");
-        disconnect.addActionListener(e -> helper.disconnect());
+        disconnect.addActionListener(e -> {
+            cancelScheduledFuture();
+            helper.disconnect();
+        });
         disconnect.setSize(100, 50);
         buttons.add("disconnect", disconnect);
 
         Button snapshot = new Button("snapshot");
         snapshot.setSize(100, 50);
-        snapshot.addActionListener(e -> {
-            refreshSnapshot(helper, panel);
-        });
+        snapshot.addActionListener(e -> refreshSnapshot(helper, panel));
         buttons.add(snapshot.getLabel(), snapshot);
 
         JFrame frame = new JFrame();
@@ -69,13 +70,14 @@ public class Main {
         frame.setVisible(true);
     }
 
+    private static void cancelScheduledFuture() {
+        if (sFuture != null) {
+            sFuture.cancel(true);
+        }
+    }
+
     private static void refreshSnapshot(AdbHelper helper, ImagePanel panel) {
         BufferedImage snapshot = helper.snapshot();
-        try {
-            ImageIO.write(snapshot, "png", new File("out/screenshot.png"));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
         BufferedImage image = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
         for (int y = 0; y < HEIGHT; y++) {
             for (int x = 0; x < WIDTH; x++) {
